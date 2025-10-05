@@ -8,6 +8,10 @@ class Parser {
 
     private final List<Token> tokens;
     private int current = 0;
+    
+    public static void setMonitorLevel(int level) {
+        ParserMonitor.setMonitorLevel(level);
+    }
 
     Parser(List<Token> tokens) {
         this.tokens = tokens;
@@ -15,6 +19,7 @@ class Parser {
 
     Expr parse() {
         try {
+            ParserMonitor.showTokens(tokens, current);
             return expression();
         } catch (ParseError error) {
             return null;
@@ -22,10 +27,14 @@ class Parser {
     }
 
     private Expr expression() {
-        return equality();
+        ParserMonitor.enterRule("expression", peek(), current);
+        Expr result = equality();
+        ParserMonitor.exitRule("expression", result != null);
+        return result;
     }
 
     private Expr equality() {
+        ParserMonitor.enterRule("equality", peek(), current);
         Expr expr = comparison();
 
         while (match(BANG_EQUAL, EQUAL_EQUAL)) {
@@ -34,10 +43,12 @@ class Parser {
             expr = new Expr.Binary(expr, operator, right);
         }
 
+        ParserMonitor.exitRule("equality", expr != null);
         return expr;
     }
 
     private Expr comparison() {
+        ParserMonitor.enterRule("comparison", peek(), current);
         Expr expr = term();
 
         while (match(GREATER, GREATER_EQUAL, LESS, LESS_EQUAL)) {
@@ -46,10 +57,12 @@ class Parser {
             expr = new Expr.Binary(expr, operator, right);
         }
 
+        ParserMonitor.exitRule("comparison", expr != null);
         return expr;
     }
 
     private Expr term() {
+        ParserMonitor.enterRule("term", peek(), current);
         Expr expr = factor();
 
         while (match(MINUS, PLUS)) {
@@ -58,10 +71,12 @@ class Parser {
             expr = new Expr.Binary(expr, operator, right);
         }
 
+        ParserMonitor.exitRule("term", expr != null);
         return expr;
     }
 
     private Expr factor() {
+        ParserMonitor.enterRule("factor", peek(), current);
         Expr expr = unary();
 
         while (match(SLASH, STAR)) {
@@ -70,45 +85,67 @@ class Parser {
             expr = new Expr.Binary(expr, operator, right);
         }
 
+        ParserMonitor.exitRule("factor", expr != null);
         return expr;
     }
 
     private Expr unary() {
+        ParserMonitor.enterRule("unary", peek(), current);
         if (match(BANG, MINUS)) {
             Token operator = previous();
             Expr right = unary();
+            ParserMonitor.exitRule("unary", right != null);
             return new Expr.Unary(operator, right);
         }
 
-        return primary();
+        Expr result = primary();
+        ParserMonitor.exitRule("unary", result != null);
+        return result;
     }
 
     private Expr primary() {
-        if (match(FALSE)) return new Expr.Literal(false);
-        if (match(TRUE)) return new Expr.Literal(true);
-        if (match(NIL)) return new Expr.Literal(null);
+        ParserMonitor.enterRule("primary", peek(), current);
+        if (match(FALSE)) {
+            ParserMonitor.exitRule("primary", true);
+            return new Expr.Literal(false);
+        }
+        if (match(TRUE)) {
+            ParserMonitor.exitRule("primary", true);
+            return new Expr.Literal(true);
+        }
+        if (match(NIL)) {
+            ParserMonitor.exitRule("primary", true);
+            return new Expr.Literal(null);
+        }
 
         if (match(NUMBER, STRING)) {
+            ParserMonitor.exitRule("primary", true);
             return new Expr.Literal(previous().literal);
         }
 
         if (match(LEFT_PAREN)) {
             Expr expr = expression();
             consume(RIGHT_PAREN, "Expect ')' after expression.");
+            ParserMonitor.exitRule("primary", expr != null);
             return new Expr.Grouping(expr);
         }
 
+        ParserMonitor.exitRule("primary", false);
         throw error(peek(), "Expect expression.");
     }
 
     private boolean match(TokenType... types) {
+        ParserMonitor.matchAttempt(types, peek(), current);
         for (TokenType type : types) {
             if (check(type)) {
+                Token matched = peek();
                 advance();
+                ParserMonitor.matchResult(true, matched);
                 return true;
             }
         }
 
+        ParserMonitor.matchResult(false, null);
         return false;
     }
 
@@ -124,7 +161,11 @@ class Parser {
     }
 
     private Token advance() {
-        if (!isAtEnd()) current++;
+        if (!isAtEnd()) {
+            Token from = peek();
+            current++;
+            ParserMonitor.advance(from, peek(), current);
+        }
         return previous();
     }
 
@@ -141,6 +182,7 @@ class Parser {
     }
     
     private ParseError error(Token token, String message) {
+        ParserMonitor.parseError(token, message);
         Lox.error(token, message);
         return new ParseError();
     }
