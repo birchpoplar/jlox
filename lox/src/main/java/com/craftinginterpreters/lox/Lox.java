@@ -49,6 +49,10 @@ public class Lox {
     private static void run(String source) {
         Scanner scanner = new Scanner(source);
         List<Token> tokens = scanner.scanTokens();
+        
+        // Enable parser monitoring
+        ParserMonitor.setMonitorLevel(ParserMonitor.MONITOR_OFF);
+        
         Parser parser = new Parser(tokens);
         Expr expression = parser.parse();
 
