@@ -28,10 +28,7 @@ class Parser {
     }
 
     private Expr expression() {
-        ParserMonitor.enterRule("expression", peek(), current);
-        Expr result = equality();
-        ParserMonitor.exitRule("expression", result != null);
-        return result;
+        return assignment();
     }
 
     private Stmt declaration() {
@@ -47,6 +44,7 @@ class Parser {
 
     private Stmt statement() {
         if (match(PRINT)) return printStatement();
+        if (match(LEFT_BRACE)) return new Stmt.Block(block());
 
         return expressionStatement();
     }
@@ -73,6 +71,40 @@ class Parser {
         Expr expr = expression();
         consume(SEMICOLON, "Expect ';' after expression.");
         return new Stmt.Expression(expr);
+    }
+
+    private List<Stmt> block() {
+        ParserMonitor.enterRule("block", peek(), current);
+        List<Stmt> statements = new ArrayList<>();
+
+        while (!check(RIGHT_BRACE) && !isAtEnd()) {
+            statements.add(declaration());
+        }
+
+        consume(RIGHT_BRACE, "Expect '}' after block.");
+        ParserMonitor.exitRule("block", true);
+        return statements;
+    }
+
+    private Expr assignment() {
+        ParserMonitor.enterRule("assignment", peek(), current);
+        Expr expr = equality();
+
+        if (match(EQUAL)) {
+            Token equals = previous();
+            Expr value = assignment();
+
+            if (expr instanceof Expr.Variable) {
+                Token name = ((Expr.Variable)expr).name;
+                ParserMonitor.exitRule("assignment", true);
+                return new Expr.Assign(name, value);
+            }
+
+            error(equals, "Invalid assignment target.");
+        }
+
+        ParserMonitor.exitRule("assignment", expr != null);
+        return expr;
     }
 
     private Expr equality() {
