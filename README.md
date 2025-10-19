@@ -76,6 +76,18 @@ java -cp target/classes com.craftinginterpreters.lox.Lox
 - **Resolver** - Static analysis pass that resolves variable bindings and catches scoping errors
 - **Interpreter** - Tree-walking interpreter using the visitor pattern for AST traversal
 
+## Parser Monitor
+
+I added a custom **Parser Monitor** feature to help understand how the AST is constructed during parsing. This debugging tool provides detailed output showing:
+
+- Rule entry and exit points during recursive descent parsing
+- Token matching attempts and results  
+- Parse tree construction in real-time
+
+See [PARSER_MONITOR_USAGE.md](PARSER_MONITOR_USAGE.md) for detailed usage instructions and examples of the monitor output.
+
+This was particularly helpful for understanding operator precedence, expression parsing, and how the recursive descent parser builds the AST structure.
+
 ## About Crafting Interpreters
 
 [Crafting Interpreters](https://craftinginterpreters.com/) is an excellent book that teaches you how to build programming languages from scratch. The book is split into two parts:
